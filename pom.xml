@@ -67,9 +67,9 @@
    </properties>
 
    <scm>
-      <connection>scm:git:git://github.com/hornetq/hornetq.git</connection>
-      <developerConnection>scm:git://github.com/hornetq/hornetq.git</developerConnection>
-      <url>https://github.com/hornetq/hornetq</url>
+      <connection>scm:git:git://github.com/ossnms/hornetq.git</connection>
+      <developerConnection>scm:git://github.com/ossnms/hornetq.git</developerConnection>
+      <url>https://github.com/ossnms/hornetq</url>
    </scm>
 
    <distributionManagement>
