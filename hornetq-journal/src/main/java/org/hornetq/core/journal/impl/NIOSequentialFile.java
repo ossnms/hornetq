@@ -13,6 +13,7 @@
 package org.hornetq.core.journal.impl;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -39,6 +40,8 @@ import org.hornetq.journal.HornetQJournalLogger;
  */
 public final class NIOSequentialFile extends AbstractSequentialFile
 {
+   private static final int MAX_CREATE_FILE_RETRIES = 5;
+
    private FileChannel channel;
 
    private RandomAccessFile rfile;
@@ -99,7 +102,7 @@ public final class NIOSequentialFile extends AbstractSequentialFile
    {
       try
       {
-         rfile = new RandomAccessFile(getFile(), "rw");
+         rfile = newRandomAccessFile(getFile(), "rw");
 
          channel = rfile.getChannel();
 
@@ -410,6 +413,58 @@ public final class NIOSequentialFile extends AbstractSequentialFile
       if (callback != null)
       {
          callback.done();
+      }
+   }
+
+   private static RandomAccessFile newRandomAccessFile(File file, String mode) throws FileNotFoundException
+   {
+      for (int attempt = 1; attempt < MAX_CREATE_FILE_RETRIES; ++attempt)
+      {
+         try
+         {
+            return new RandomAccessFile(file, mode);
+         }
+         catch (FileNotFoundException exception)
+         {
+            String msg = exception.getMessage();
+
+            if (msg == null || !msg.contains("The process cannot access the file because it is being used by another process"))
+            {
+               throw exception;
+            }
+
+            HornetQJournalLogger.LOGGER.warn("NIOSequentialFile couldn't open \"" + file + "\" in attempt #" + attempt);
+         }
+
+         switch (attempt)
+         {
+            case 1:
+               Thread.yield();
+               break;
+            case 2:
+               threadSleep(1);
+               break;
+            case 3:
+               threadSleep(10);
+               break;
+            default:
+               threadSleep(100);
+               break;
+         }
+      }
+
+      return new RandomAccessFile(file, mode);
+   }
+
+   private static void threadSleep(long ms)
+   {
+      try
+      {
+         Thread.sleep(ms);
+      }
+      catch (InterruptedException ex)
+      {
+         Thread.currentThread().interrupt();
       }
    }
 }
